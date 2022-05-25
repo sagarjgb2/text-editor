@@ -4,6 +4,7 @@ import { Slate, Editable, withReact } from 'slate-react';
 import { withHistory } from 'slate-history';
 import './Word.css';
 import ClipboardJS from 'clipboard';
+import { withPaging } from 'slate-paged';
 
 
 // ######################################################################################
@@ -147,9 +148,75 @@ const CustomEditor = {
 // #############################################################################################################################################################################
 
 const Edi2 = () => {
-  // const editor = useMemo(() => withReact(createEditor()), [])
-  const editor = useMemo(() => withHistory(withReact(createEditor())), [])
-   
+   const withTextLimit = ({ limit = 10 } = {}) => function Plugin(editor) {
+     var brkCount =1;
+     var ediLimit = 101;
+     const brk = document.getElementsByTagName('br').length;
+     const para = document.getElementsByTagName('p').length;
+    const { insertText, insertNode, insertBreak, onChange } = editor; 
+    editor.insertText = (text) => {  
+      const brk = document.getElementsByTagName('br').length;
+     console.log("limit : ", limit);
+        console.log("total para: ",document.getElementsByTagName('p').length);
+        console.log("total break: ", brk);
+        console.log("brkCount: ", brkCount);
+        console.log("-------------------------------------------------");
+      if(document.getElementsByTagName('p').length<limit){
+        CustomEditor.toggleBlock(editor, 'paragraph');
+        if(Editor.string(editor, []).length < ediLimit){
+          CustomEditor.toggleBlock(editor, 'paragraph');
+          insertText(text);
+          console.log(Editor.string(editor, []).length,'<',ediLimit);
+        }
+        else{
+          editor.insertBreak();
+          ediLimit = ediLimit + 95;
+        }
+        
+      }
+      else{
+    brkCount = brkCount + 1;
+    insertNode(
+      {
+        type: 'break',
+        children: [{ text: '' }],
+      }
+    );
+        limit = limit + 10;
+        console.log('max limit reached!');
+      }
+    };
+    onkeydown = (e) => {
+      if(e.key=== 'Backspace' && e.ctrlKey){
+        console.log("brk : ", document.getElementsByTagName('br').length);
+        console.log("enter if brk<brkCount");
+       limit = limit - 10;
+      }
+      else if(e.key=== 'Backspace'){
+        limit = limit - 1;
+       }
+    }
+
+    return editor;
+  };
+
+ 
+  const editor = useMemo(() => withTextLimit()(withReact(createEditor())), []);
+
+
+  const plugins = [
+    withPaging({
+      pageSize: 5,
+      pageKey: 'page',
+      pageCountKey: 'pageCount',
+      pageCount: 10,
+      pageNumber: 1,
+      pageNumberKey: 'pageNumber',
+      pageNumberLabel: 'Page',
+      pageNumberLabelKey: 'pageNumberLabel',
+    }),
+  ]
+
   const getInitialState = () => {
     const value = "11";
     return value;
@@ -181,7 +248,6 @@ const Edi2 = () => {
           editor,
           { type: e.target.value},
         )
-        console.log("value is:", value);
   };
 
   const handleColorChange = (e) => {
@@ -190,7 +256,6 @@ const Edi2 = () => {
           editor,
           { type: e.target.value},
         )
-        console.log("color is:", cvalue);
   };
 
   const handleFFChange = (e) => {
@@ -199,7 +264,6 @@ const Edi2 = () => {
           editor,
           { type: e.target.value},
         )
-        console.log("font is:", fvalue);
   };
 
   const handleLineSpaceChange = (e) => {
@@ -208,24 +272,14 @@ const Edi2 = () => {
           editor,
           { type: e.target.value},
         )
-        console.log("line space is:", lvalue);
   };
 
-  // Update the initial content to be pulled from Local Storage if it exists.
-      const initialValue = useMemo(
-        () =>
-          JSON.parse(localStorage.getItem('content')) || [
+      const initialValue = [
             {
               type: 'paragraph',
-              children: [{ text: 'A line of text in a paragraph.' }],
+              children: [{ text: 'a' }],
             },
-            {
-              type: 'paragraph',
-              children: [{ text: 'A second line of text in a paragraph.' }],
-            },
-          ],
-        []
-      )
+          ];
 
   const renderElement = useCallback(props => {
     switch (props.element.type) {
@@ -362,6 +416,10 @@ const Edi2 = () => {
             return <div {...props.attributes} style={{ backgroundColor:"#d3d3d3", pageBreakAfter: "always", pageBreakBefore: "always"}}>
             <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p>
             </div>
+            case 'break':
+              return <div {...props.attributes} id='brk'>
+              <p>{props.children}</p>
+              </div>
 
             
         default:
@@ -628,20 +686,12 @@ let clipboardPaste = new ClipboardJS('#btnPaste');
       </div>
 
       <div id='ediText'>
-      <Slate editor={editor} value={initialValue} onChange={value => {
-        const isAstChange = editor.operations.some(
-          op => 'set_selection' !== op.type
-        )
-        if (isAstChange) {
-          // Save the value to Local Storage.
-          const content = JSON.stringify(value)
-          localStorage.setItem('content', content)
-        }
-      }}>
+      <Slate editor={editor} value={initialValue}>
       
       <Editable id='editor2'
         renderElement={renderElement}
         renderLeaf={renderLeaf}
+        plugins={plugins}
         placeholder="Enter some rich text…"
         spellCheck
         autoFocus
@@ -723,7 +773,6 @@ const DefaultElement = props => {
 
 
 const Leaf = ({ attributes, children, leaf }) => {
-  console.log(children);
   if (leaf.bold) {
     children = <strong>{children}</strong>
   }

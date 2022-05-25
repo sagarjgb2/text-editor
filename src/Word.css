@@ -81,13 +81,17 @@ text-align: left;
 margin-top: 9px;
 margin-left: 24%;
 /* position: absolute; */
+
 width: 8.5in;
 min-height: 11in;
-/* max-height: 11in; */
-/* padding-left: 7px;
+ /* padding-left: 7px; 
 padding-right: 7px;
-padding-bottom: 6px; */
-/* padding: 10px; */
-/* box-shadow: 0 0 5px 0 rgba(0, 0, 0, .5); */
+padding-bottom: 6px; 
+padding: 10px; 
+ box-shadow: 0 0 5px 0 rgba(0, 0, 0, .5);  */
     
+}
+
+#brk{
+    background-color: rgb(208, 207, 207);
 }
